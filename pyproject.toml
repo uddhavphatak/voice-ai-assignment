@@ -9,21 +9,21 @@ license = { text = "MIT" }
 dependencies = [
     # Core
     "python-dotenv>=1.0.0",
-    
     # FastAPI & Streaming
     "fastapi>=0.109.0",
     "uvicorn[standard]>=0.27.0",
     "sse-starlette>=2.0.0",
     "python-multipart>=0.0.6",
-    
     # Audio processing
     "pydub>=0.25.1",
     "soundfile>=0.12.1",
     "numpy>=1.24.0",
-    
     # CLI & Formatting
     "rich>=13.7.0",
     "typer>=0.9.0",
+    "openai-whisper>=20240930",
+    "numba>=0.59.0",
+    "librosa>=0.11.0",
 ]
 
 [project.optional-dependencies]
@@ -61,8 +61,8 @@ concall = "main:cli"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.uv]
-dev-dependencies = [
+[dependency-groups]
+dev = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.23.0",
     "httpx>=0.26.0",
@@ -80,3 +80,6 @@ ignore = ["E501"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
