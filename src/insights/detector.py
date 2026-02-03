@@ -17,13 +17,17 @@ Suggested Approaches:
 - Rule-based keyword extraction as fallback
 - Hybrid: rules for speed, LLM for quality
 """
-
-from dataclasses import dataclass, field
+import json
+import logging
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import List, Optional
 
+from openai import AsyncOpenAI
+
 from src.transcription.transcriber import TranscriptChunk
 
+logger = logging.getLogger(__name__)
 
 class InsightType(Enum):
     """Types of financial insights to detect."""
@@ -111,6 +115,8 @@ class InsightDetector:
         # Example with OpenAI:
         # from openai import OpenAI
         # self.client = OpenAI()
+        if self.use_llm:
+            self.client = AsyncOpenAI()
         
     async def analyze(self, chunk: TranscriptChunk) -> InsightResult:
         """
@@ -143,8 +149,44 @@ class InsightDetector:
         #     insights=insights,
         #     rolling_summary=self._update_summary(chunk),
         # )
-        
-        raise NotImplementedError("TODO: Implement insight detection")
+
+        current_insights = []
+
+        if self.use_llm:
+            try:
+                prompt = self._build_prompt(chunk)
+                response = await self._call_llm(prompt)
+
+                # Parse the LLM JSON response
+                data = json.loads(response)
+
+                # Update rolling summary with new information
+                self.current_summary = data.get("rolling_summary", self.current_summary)
+
+                # Process insights
+                for item in data.get("insights", []):
+                    insight = Insight(
+                        type=InsightType(item.get("type", "other")),
+                        text=item.get("text", ""),
+                        sentiment=Sentiment(item.get("sentiment", "neutral")),
+                        source_text=chunk.text,
+                        timestamp=chunk.start_time
+                    )
+                    current_insights.append(insight)
+                    self.all_insights.append(insight)
+
+            except Exception as e:
+                logger.error(f"LLM insight extraction failed: {e}")
+                # Fallback to rule-based extraction
+                current_insights = self._extract_insights_rule_based(chunk)
+        else:
+            current_insights = self._extract_insights_rule_based(chunk)
+
+        return InsightResult(
+            chunk=chunk,
+            insights=current_insights,
+            rolling_summary=self.current_summary,
+        )
     
     def _build_prompt(self, chunk: TranscriptChunk) -> str:
         """Build the prompt for LLM-based insight extraction."""
@@ -155,6 +197,7 @@ class InsightDetector:
         # - The transcript history so far
         # - Clear instructions for what to extract
         # - Output format specification
+        recent_context = " ".join([c.text for c in self.conversation_history[-3:-1]])
         
         prompt = f"""
         Analyze this transcript chunk from an Indian earnings call:
@@ -174,7 +217,15 @@ class InsightDetector:
     async def _call_llm(self, prompt: str) -> str:
         """Call the LLM API for insight extraction."""
         # TODO: Implement LLM API call
-        raise NotImplementedError("TODO: Implement LLM call")
+        response = await self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a financial analyst extracting insights from earnings calls."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        return response.choices[0].message.content
     
     def _extract_insights_rule_based(self, chunk: TranscriptChunk) -> List[Insight]:
         """
@@ -190,16 +241,47 @@ class InsightDetector:
         - Sentiment signals
         """
         # TODO: Implement rule-based extraction
-        raise NotImplementedError("TODO: Implement rule-based insight extraction")
+        insights = []
+        text_lower = chunk.text.lower()
+
+        # Simple keyword map for demonstration
+        mapping = {
+            "revenue": InsightType.REVENUE,
+            "guidance": InsightType.GUIDANCE,
+            "risk": InsightType.RISK,
+            "outlook": InsightType.OUTLOOK,
+            "ebitda": InsightType.MARGIN
+        }
+
+        for keyword, insight_type in mapping.items():
+            if keyword in text_lower:
+                insights.append(Insight(
+                    type=insight_type,
+                    text=f"Detected mention of {keyword}",
+                    source_text=chunk.text,
+                    timestamp=chunk.start_time
+                ))
+        return insights
+
+    async def _call_llm(self, prompt: str) -> str:
+        """Call the LLM API."""
+        response = await self.client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"}
+        )
+        return response.choices[0].message.content
     
-    def get_final_summary(self) -> str:
+    async def get_final_summary(self) -> str:
         """
         Generate a final summary of the entire call.
         
         Call this after processing all chunks.
         """
         # TODO: Implement final summary generation
-        raise NotImplementedError("TODO: Implement final summary")
+        full_text = " ".join([c.text for c in self.conversation_history])
+        prompt = f"Provide a final, detailed summary of this earnings call transcript: {full_text}"
+        return await self._call_llm(prompt)
     
     def get_key_insights(self) -> List[Insight]:
         """Get the most important insights detected so far."""

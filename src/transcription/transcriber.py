@@ -56,8 +56,8 @@ class StreamingTranscriber:
         
         # TODO: Initialize your ASR model here
         # Example with whisper:
-        # import whisper
-        # self.model = whisper.load_model(model_name)
+        import whisper
+        self.model = whisper.load_model(model_name)
         
     async def process_audio(
         self, 
@@ -84,25 +84,28 @@ class StreamingTranscriber:
         #
         # Example skeleton:
         # 
-        # from src.utils.audio_utils import load_audio, split_into_chunks
-        # 
-        # audio = load_audio(audio_path)
-        # chunks = split_into_chunks(audio, chunk_duration)
-        # 
-        # for i, audio_chunk in enumerate(chunks):
-        #     start_time = i * chunk_duration
-        #     end_time = start_time + chunk_duration
-        #     
-        #     # Transcribe the chunk
-        #     result = self.model.transcribe(audio_chunk)
-        #     
-        #     yield TranscriptChunk(
-        #         text=result["text"],
-        #         start_time=start_time,
-        #         end_time=end_time,
-        #     )
+        from src.utils.audio_utils import load_audio, split_into_chunks
         
-        raise NotImplementedError("TODO: Implement streaming transcription")
+        #audio = load_audio(audio_path)
+        #chunks = split_into_chunks(audio, chunk_duration)
+        audio_data, sample_rate = load_audio(audio_path)
+        chunks = split_into_chunks(audio_data, sample_rate, chunk_duration)
+         
+        #for i, audio_chunk in enumerate(chunks):
+        #    start_time = i * chunk_duration
+        #    end_time = start_time + chunk_duration
+            
+        for audio_chunk, start_time, end_time in chunks:
+            # Transcribe the chunk
+            result = self.model.transcribe(audio_chunk)
+            
+            yield TranscriptChunk(
+                text=result["text"],
+                start_time=start_time,
+                end_time=end_time,
+            )
+        
+        #raise NotImplementedError("TODO: Implement streaming transcription")
     
     async def process_audio_stream(
         self, 

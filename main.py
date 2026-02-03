@@ -95,26 +95,26 @@ async def _process_audio(audio_path: Path, chunk_duration: float, output: str):
     #    b. Detect insights from the transcript
     #    c. Output the results
     
-    console.print("[yellow]⚠️  TODO: Implement your solution![/yellow]")
-    console.print("[dim]See the module files in src/ for implementation guidelines.[/dim]\n")
+    #console.print("[yellow]⚠️  TODO: Implement your solution![/yellow]")
+    #console.print("[dim]See the module files in src/ for implementation guidelines.[/dim]\n")
     
     # Example skeleton (uncomment and modify as needed):
     # 
-    # from src.transcription.transcriber import StreamingTranscriber
-    # from src.insights.detector import InsightDetector
-    # from src.streaming.streamer import ConsoleStreamer
-    # 
-    # transcriber = StreamingTranscriber()
-    # detector = InsightDetector()
-    # streamer = ConsoleStreamer()
-    # 
-    # async for chunk in transcriber.process_audio(audio_path, chunk_duration):
-    #     insights = await detector.analyze(chunk)
-    #     await streamer.stream(chunk, insights)
-    # 
-    # # Final summary
-    # summary = detector.get_final_summary()
-    # await streamer.stream_summary(summary)
+    from src.transcription.transcriber import StreamingTranscriber
+    from src.insights.detector import InsightDetector
+    from src.streaming.streamer import ConsoleStreamer
+     
+    transcriber = StreamingTranscriber()
+    detector = InsightDetector()
+    streamer = ConsoleStreamer()
+     
+    async for chunk in transcriber.process_audio(audio_path, chunk_duration):
+        insights = await detector.analyze(chunk)
+        await streamer.stream(chunk, insights)
+     
+    # Final summary
+    summary = detector.get_final_summary()
+    await streamer.stream_summary(summary)
 
 
 @cli.command()

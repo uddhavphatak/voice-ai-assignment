@@ -6,6 +6,8 @@ Helper functions for audio processing.
 
 from pathlib import Path
 from typing import Iterator, Tuple, Union
+import soundfile as sf
+import librosa
 
 import numpy as np
 
@@ -28,21 +30,20 @@ def load_audio(
     # 
     # Example with soundfile:
     # 
-    # import soundfile as sf
-    # audio, sr = sf.read(audio_path)
-    # 
-    # # Resample if necessary
-    # if sr != sample_rate:
-    #     # Use librosa or scipy for resampling
-    #     pass
-    # 
-    # # Convert to mono if stereo
-    # if len(audio.shape) > 1:
-    #     audio = audio.mean(axis=1)
-    # 
-    # return audio.astype(np.float32), sample_rate
+    audio, sr = sf.read(audio_path)
+     
+    # Resample if necessary
+    if sr != sample_rate:
+        # Use librosa or scipy for resampling
+        pass
+     
+    # Convert to mono if stereo
+    if len(audio.shape) > 1:
+        audio = audio.mean(axis=1)
+     
+    return audio.astype(np.float32), sample_rate
     
-    raise NotImplementedError("TODO: Implement audio loading")
+    #raise NotImplementedError("TODO: Implement audio loading")
 
 
 def split_into_chunks(
@@ -65,16 +66,16 @@ def split_into_chunks(
     # 
     # Example:
     # 
-    # chunk_samples = int(chunk_duration * sample_rate)
-    # total_samples = len(audio)
-    # 
-    # for i in range(0, total_samples, chunk_samples):
-    #     chunk = audio[i:i + chunk_samples]
-    #     start_time = i / sample_rate
-    #     end_time = min((i + chunk_samples) / sample_rate, total_samples / sample_rate)
-    #     yield chunk, start_time, end_time
+    chunk_samples = int(chunk_duration * sample_rate)
+    total_samples = len(audio)
+     
+    for i in range(0, total_samples, chunk_samples):
+        chunk = audio[i:i + chunk_samples]
+        start_time = i / sample_rate
+        end_time = min((i + chunk_samples) / sample_rate, total_samples / sample_rate)
+        yield chunk, start_time, end_time
     
-    raise NotImplementedError("TODO: Implement audio chunking")
+    # raise NotImplementedError("TODO: Implement audio chunking")
 
 
 def get_audio_duration(audio_path: Union[str, Path]) -> float:
