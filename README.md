@@ -1,5 +1,3 @@
-# Real-Time Indian Concall Transcription & Insight Streaming
-
 ## 🎯 Assignment Overview
 
 Build a prototype system that processes **Indian earnings / conference calls (concalls)** and generates **live insights while the call is happening**.
@@ -179,17 +177,36 @@ uv run python main.py --help
 
 ---
 
-## 📝 Your README Should Explain
+## 📝 README answers:
 
 When you complete the assignment, update this README to include:
 
-- [ ] What you built
-- [ ] High-level architecture
-- [ ] How streaming is handled
-- [ ] Assumptions and tradeoffs
-- [ ] What you would improve with more time
+- [x] **What you built**
+1. _Streaming Transcription_: implemented 'src/transcription/transcriber.py' to use the OpenAI Whisper model to process audio in chunks of 5.0 seconds.
+2. _Real-Time Insight Detection_: implemented 'src/insights/detector.py' to use a hybrid LLM (OpenAI) and rule-based fallback to generate rolling summaries.(though I wasn't able to test this due to limit exceeded)
+3. _Streaming Output_: implementation in 'src/api/main.py' with the already given FastAPI for web-based streaming and a ConsoleStreamer for CLI mode.
 
-**Optional:** Logs or screenshots demonstrating streaming output
+- [x] **High-level architecture**
+1. _Pipeline Flow_: Audio is loaded and split into chunks using the audio_utils.py. These are transcribed by 'StreamingTranscriber' and analyzed by 'InsightDetector'.
+2. _Asynchronous Processing_: This implementation is using Python's asyncio to handle transcription and LLM analysis.
+
+- [x] **How streaming is handled**
+1. _Audio Chunking_: The audio_utils module slices the incoming audio files into a lot of small buffers which are based on a configurable chunk_duration.
+2. _Sequential Processing_: The StreamingTranscriber outputs the text chunks as soon they are finished.
+3. _Real-Time Pushes_: As each transcript chunk goes into InsightDetector, the LLM is prompted to give a "rolling summary." These results are then sendt to the FastAPI EventSourceResponse, which are sent to the user as SSE events.
+
+- [x] **Assumptions and tradeoffs**
+1. _Chunk Duration vs. Accuracy_: I have assumed a 5-second chunk duration as a default. Tradeoff: Shorter chunks will provide faster feedback but may cut off speakers mid-sentence, potentially reducing the LLM's initial context for that specific fragment.
+2. _Hybrid Fallback_: The system wants internet connectivity for the LLM calls. Tradeoff: a rule-based fallback mechanism (regex/keyword matching) in the InsightDetector can be used ensure that basic signals are still caught if the LLM API fails.
+3. _Local Processing_: Transcription is performed locally. Tradeoff: This will require more local compute power(GPU/CPU) compared to a cloud API but this will ensure better data privacy.
+
+- [x] **What you would improve with more time**
+1. _Speaker Diarization_: I would Implement a system to distinguish between company management and analysts to provide the "Q&A" specific insights.
+2. _Hinglish Support_: Fine-tune the transcription prompt to handle the mix of Hindi and English which is common in Indian calls.
+3. _Sentiment Shift Tracking_: Add a visualization to track how management sentiment changes from the initial presentation to the analyst Q&A session.
+
+- [x] Logs or screenshots demonstrating streaming output
+<img width="1849" height="842" alt="Screenshot from 2026-02-03 11-08-17" src="https://github.com/user-attachments/assets/8658b7a8-16f1-49d6-9326-3cd9e42fbce8" />
 
 ---
 
